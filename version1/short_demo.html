@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="jspsych-6.1.0/jspsych.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-video-keyboard-response.js"></script>
+	<script src="jspsych-6.1.0/plugins/jspsych-fullscreen.js"></script>
+	<script src="jspsych-6.1.0/plugins/jspsych-instructions.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-html-button-response.js"></script>
+    <link rel="stylesheet" href="jspsych-6.1.0/css/jspsych.css"></link>
+  </head>
+  <body></body>
+  <script>
+	  
+	  
+	  // ORGANIZE SUBJECT ID & GENERAL PARAMETERS
+
+	  // generate a random subject ID (just to be safe)
+	  var subject_id = Math.floor(Math.random()*1000000);
+	  subject_id="p"+subject_id.toString();
+	  
+	  var date = new Date();
+	  var iso_date = date.toISOString()
+
+	  //general function for grabbing parameter from a URL
+	  function getParamFromURL( name ) {
+	  	name = name.replace(/[\[]/,"\\[").replace(/[\]]/,"\\]");
+	  	var regexS = "[\?&]"+name+"=([^&#]*)";
+	  	var regex = new RegExp( regexS );
+	  	var results = regex.exec( window.location.href );
+	  	if( results == null )
+	  		return "";
+	  	else
+	  		return results[1];
+	  }
+
+	  //save assignment_id if it is part of the survey URL ?id=
+	  var assignment_id  = getParamFromURL( 'id' );
+	  
+	  //otherwise just use the randomly generated subject ID
+	  if (assignment_id==="") {
+	  	assignment_id=subject_id;
+	  };
+	  //make sure that nobody can enter anything damaging or crazy for assignment_id
+	  assignment_id.replace(/[^A-Za-z0-9_]/g, "");
+	  console.log(assignment_id);
+	  
+	  assignment_id_isodate = assignment_id.concat("_",iso_date);
+	  console.log(assignment_id_isodate);
+	  
+	  //add to all trials
+	  jsPsych.data.addProperties({
+	    participant: assignment_id,
+	    iso_identifier: assignment_id_isodate
+	  });
+	  
+	  // EXPERIMENT TRIALS
+	  
+	  var fullscreen = {
+	    type: 'fullscreen',
+	    fullscreen_mode: true
+	  };
+	  
+	  var pre_trial = {
+		  type: 'html-button-response',
+		  stimulus: '<div style="max-width:600px;"><p>Once you are ready, click continue to start the video.</p></div>',
+		  choices: ['continue']
+	  
+	  };
+	  
+	  var trial = {
+		  type: 'video-keyboard-response',
+		  sources: ['stimuli/TL2-18-1.mp4'],
+		  choices: [],
+		  prompt: '',
+		  width: 1280,
+		  height: 720,
+		  autoplay: true,
+		  trial_duration: 16000,
+		  response_ends_trial: false,
+		  //trial_ends_after_video: true,
+	  };
+	  
+	  
+	  var final_message = {
+		  type: 'instructions',
+	      pages: [
+	          '<div style="max-width:600px;"><p>Thank you for participating! You may now safely close the browser window. Press Esc to exit fullscreen mode.</p></div>'
+	      ],
+	      show_clickable_nav: false
+	  };
+	  
+	  // function for storing data
+	  function saveData(name, data){
+		  var xhr = new XMLHttpRequest();
+		  xhr.open('POST', 'write_data.php'); // 'write_data.php' is the path to the php file described above.
+		  xhr.setRequestHeader('Content-Type', 'application/json');
+		  xhr.send(JSON.stringify({filename: name, filedata: data}));
+	  };
+	  
+	  
+	  jsPsych.init({
+		  show_preload_progress_bar: true,
+		  timeline: [fullscreen,pre_trial, trial],
+		  on_finish: function() {
+			  //jsPsych.data.displayData();
+			  saveData(assignment_id_isodate, jsPsych.data.get().csv());
+			  jsPsych.init({
+				  timeline: [final_message]
+			  })
+		  }
+	  });
+
+  </script>
+</html>
